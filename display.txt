@@ -1,0 +1,126 @@
+#define F_CPU 16000000
+#include <avr/io.h>
+#include <stdint.h>
+#include <util/delay.h>
+
+#define pb3 3
+#define pb5 5
+#define pb2 2
+
+uint8_t mask = 0;
+uint8_t mask_dest = 1;
+uint8_t mask2 = 0;
+uint8_t mask_dest2 = 1;
+
+
+int clamp(int value, int min, int max)
+{
+    if (value < min) return max;
+    if (value > max) return min;
+    return value;
+}
+
+void execute(uint8_t cmd,uint8_t data)
+{
+    PORTB &= ~(1<<pb2);
+    
+    SPDR = cmd;
+    while(!(SPSR & (1<<SPIF)));
+    
+    SPDR = data;
+    while(!(SPSR & (1<<SPIF)));
+    
+    PORTB |= (1<<pb2);
+}
+
+int main(void)
+{
+    DDRB = (1<<pb3)|(1<<pb5)|(1<<pb2);
+    SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);
+    DDRD = 0;
+    
+    execute(0x09,0x00); //decode=0
+    
+    execute(0x0B,0x07);  //nmr of displays=8
+    execute(0x0C,0x01); // turn on screans
+    execute(0x0A,0x05); //intensity
+    
+
+    
+    while (0) 
+    {
+        //Good Fucc
+        execute(0x01,0b00001101); //digit number and value
+        execute(0x02,0b00001101);
+        execute(0x03,0b01100111);
+        execute(0x04,0b01011111);
+    
+        execute(0x05,0b00111101);
+        execute(0x06,0b00011101);
+        execute(0x07,0b01100111);
+        execute(0x08,0b00111111);
+    
+    }
+    while (1)
+    {
+        
+        mask_dest = clamp(mask_dest,1,8);
+        
+        switch(mask_dest)
+        {
+            case 1:
+            mask = 0b00001110;
+            mask2 = 0;
+            break;
+            
+            case 2:
+            mask = 0b01000110;
+            break;
+            
+            case 3:
+            mask2 = 64;
+            mask = 0b01000010;
+            break;
+            
+            case 4:
+            mask = 64;
+            mask2 = 0b01100000;
+            break;
+            
+            case 5:
+            mask2 = 0b01110000;
+            mask = 0;
+            break;
+            
+            case 6:
+            mask2 = 0b00111000;
+            break;
+            
+            case 7:
+            mask2 = 0b00011000;
+            mask = 8;
+            break;
+            
+            case 8:
+            mask2 = 8;
+            mask = 0b00001100;
+            break;
+        }
+
+        //P2
+        execute(0x01,mask2);
+        execute(0x02,0b01101101);
+        execute(0x03,0b01100111);
+        execute(0x04,mask);
+           
+        //P1
+        execute(0x05,mask2);
+        execute(0x06,0b00110000);
+        execute(0x07,0b01100111);
+        execute(0x08,mask);
+        
+        mask_dest ++;
+        _delay_ms(100);
+    }
+}
+

@@ -1,0 +1,110 @@
+#define F_CPU 1000000UL
+#include <avr/io.h>
+#include <avr/interrupt.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <util/delay.h>
+
+
+volatile uint16_t tid = 255;
+volatile bool wait = false;
+volatile bool anti_cheat = false;
+
+ISR(INT0_vect) {
+    cli();
+    if (anti_cheat) {
+        for(uint16_t i = 0; i < 10; i ++){
+            for(uint16_t i = 0; i < 60000; i ++){
+                PORTD |= (1 << 0);
+            }    
+        }            
+        PORTD &= ~(1 << 0);
+        PORTD &= ~(1 << 1);                
+    }       
+    else {
+        for(uint16_t i = 0; i < 5; i ++){
+            for(uint16_t i = 0; i < 60000; i++){
+                PORTD |= (1 << 0);
+            }                
+            for(uint16_t i = 0; i < 60000; i++){
+                PORTD &= ~(1 << 0);
+            }
+            } 
+        }                           
+        wait = false;
+        sei();
+}
+ISR(INT1_vect){ 
+    cli();
+    if(anti_cheat){  
+        for(uint16_t i = 0; i < 5; i ++){                  
+            for(uint16_t i = 0; i < 60000; i ++){
+                PORTD |= (1 << 5); 
+            }
+        }                     
+        PORTD &= ~(1 << 5);
+        PORTD &= ~(1 << 1);
+    }
+    else {
+        for(uint16_t i = 0; i < 5; i ++){
+            for(uint16_t i = 0; i < 60000; i++){
+                PORTD |= (1 << 5);
+            }                
+            for(uint16_t i = 0; i < 60000; i++){
+                PORTD &= ~(1 << 5);
+            }  
+        }                  
+    }    
+    wait = false;
+    sei();
+}
+/*
+ISR(int2_vect){
+
+}
+*/
+
+int main(void)
+{
+    DDRD = 0b11110011;
+    DDRB = 0b11111011;
+    /*
+
+    EICRA |= (1 << ISC21);  // Fallande flank (ISC21 = 1, ISC20 = 0)
+    EIMSK |= (1 << INT2);   // Aktivera INT2
+    */
+
+    
+    EICRA |= (1 << ISC01);  // Fallande flank (ISC01 = 1, ISC00 = 0)
+    EIMSK |= (1 << INT0);   // Aktivera INT0
+    
+    EICRA |= (1 << ISC11);  // ISC11 = 1, ISC10 = 0, fallande flank
+    EIMSK |= (1 << INT1);
+    
+    sei();
+    
+    while (1)
+    {
+        anti_cheat = false;
+        cli();
+        if (!(PINB & (1 << 2))) {
+            wait = !wait;
+            PORTD |= (1 << 1);
+            _delay_ms(1000);
+            PORTD &= ~(1 << 1);
+        }
+        if(wait){
+            sei();
+            tid = tid / 4;
+            for (uint16_t i = 0; i < tid; i ++) {
+                _delay_ms(1);                
+            }
+            while (wait) {
+            PORTD |= (1 << 1);
+            anti_cheat = true;
+            }
+        }        
+        tid++;
+    }
+}
+
