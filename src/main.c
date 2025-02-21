@@ -5,6 +5,8 @@
 
 #define CS 2   // PB2 (CS/LOAD)
 
+uint8_t counter = 0;
+
 void execute(uint8_t cmd, uint8_t data)
 {
     PORTB &= ~(1 << CS); // CS LOW (starta överföring)
@@ -29,16 +31,20 @@ int main(void)
     SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
 
     // 🔧 Initiera MAX7221 korrekt
-    execute(0x09, 0x00); // Decode mode av
+    execute(0x09, 0x01); // Decode 
     execute(0x0B, 0x00); // Endast DIG 0 aktiv (ändra till 0x07 om fler används)
-    execute(0x0A, 0x0F); // Max ljusstyrka
+    execute(0x0A, 0x05); // ljusstyrka
     execute(0x0C, 0x01); // Slå på MAX7221
     execute(0x0F, 0x00); // Stäng av testläge
 
     while (1)
     {
-        execute(0x01, 0b00111111); // Visa "0" på DIG 0
+        if(counter == 10){
+            counter = 0;
+        }
+        execute(0x01, counter);
         _delay_ms(500);
+        counter ++;
         PORTD = 255;
     }
 }
