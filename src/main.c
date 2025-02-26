@@ -1,29 +1,10 @@
-#define F_CPU 16000000
 #include <avr/io.h>
+#include <avr/interrupt.h>
 #include <stdint.h>
-#include <util/delay.h>
 #include <stdbool.h>
+#include <util/delay.h>
 
 #define CS 2   // PB2 (CS/LOAD)
-
-uint8_t digit = 0;
-uint8_t digit2 = 0;
-uint8_t digit3 = 0;
-uint8_t digit4 = 0;
-uint8_t digit5 = 0;
-uint8_t digit6 = 0;
-uint8_t digit7 = 0;
-uint8_t digit8 = 0;
-
-uint8_t counter1 = 0;
-uint8_t counter2 = 0;
-uint8_t counter3 = 0;
-uint8_t counter4 = 0;
-uint8_t counter5 = 0;
-uint8_t counter6 = 0;
-uint8_t counter7 = 0;
-uint8_t counter8 = 0;
-
 
 void execute(uint8_t cmd, uint8_t data)
 {
@@ -40,6 +21,19 @@ void execute(uint8_t cmd, uint8_t data)
 
 int main(void)
 {
+    EICRA |= (1 << ISC21);  // Fallande flank (ISC21 = 1, ISC20 = 0)
+    EIMSK |= (1 << INT2);   // Aktivera INT2
+    
+
+    
+    EICRA |= (1 << ISC01);  // Fallande flank (ISC01 = 1, ISC00 = 0)
+    EIMSK |= (1 << INT0);   // Aktivera INT0
+    
+    EICRA |= (1 << ISC11);  // ISC11 = 1, ISC10 = 0, fallande flank
+    EIMSK |= (1 << INT1);
+    
+    sei();
+    
     DDRD = 255;
     // Ställ in SPI-pinnar som output (MOSI, SCK, CS)
     DDRB = (1 << PB3) | (1 << PB5) | (1 << CS);
@@ -49,7 +43,7 @@ int main(void)
     SPCR = (1 << SPE) | (1 << MSTR) | (1 << SPR0);
 
     // 🔧 Initiera MAX7221 korrekt
-    execute(0x09, 0x01); // Decode 
+    execute(0x09, 0xFF); // Decode 
     execute(0x0B, 0x07); // Endast DIG 0 aktiv (ändra till 0x07 om fler används)
     execute(0x0A, 0x05); // ljusstyrka
     execute(0x0C, 0x01); // Slå på MAX7221
@@ -57,67 +51,5 @@ int main(void)
 
     while (1)
     {
-
-
-        counter1 ++;
-        digit ++;
-
-        if (digit == 10 ){
-            counter2 ++;
-            digit = 0;
-            counter1 = 0;
-            digit2 ++;
-        }
-        if (digit2 == 10)
-        {
-            counter3 ++;
-            digit2 = 0;
-            counter2 = 0;
-            digit3 ++;
-        }
-        if (digit3 == 10)
-        {
-            counter4 ++;
-            digit3 = 0;
-            counter3 = 0;
-            digit4 ++;
-        }
-        if (digit4 == 10)
-        {
-            counter5 ++;
-            digit4 = 0;
-            counter4 = 0;
-            digit5 ++;
-        }
-        if (digit5 == 10)
-        {
-            counter6 ++;
-            digit5 = 0;
-            counter5 = 0;
-            digit6 ++;
-        }
-        if (digit6 == 10)
-        {
-            counter7 ++;
-            digit6 = 0;
-            counter6 = 0;
-            digit7 ++;
-        }
-        if (digit7 == 10)
-        {
-            counter8 ++;
-            digit7 = 0;
-            counter7 = 0;
-            digit8 ++;
-        }
-        execute(0x01, counter1);
-        execute(0x02, counter2);
-        execute(0x03, counter3);
-        execute(0x04, counter4);
-        execute(0x05, counter5);
-        execute(0x06, counter6);
-        execute(0x07, counter7);
-        execute(0x08, counter8);
-
     }
 }
