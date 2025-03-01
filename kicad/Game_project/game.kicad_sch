@@ -5023,6 +5023,26 @@
 		)
 		(uuid "0904a2e6-789c-4fbf-b23e-674004ae43de")
 	)
+	(label "G"
+		(at 246.38 66.04 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0cc1befe-26f1-46fd-9039-f54e1fb02640")
+	)
+	(label "G"
+		(at 274.32 66.04 0)
+		(effects
+			(font
+				(size 1.27 1.27)
+			)
+			(justify left bottom)
+		)
+		(uuid "0dac8431-a218-470f-8f41-0a2c0dd0a206")
+	)
 	(label "LOAD"
 		(at 100.33 71.12 180)
 		(effects
@@ -5402,16 +5422,6 @@
 			(justify left bottom)
 		)
 		(uuid "63b72342-1438-4a70-ba52-a73df6315bca")
-	)
-	(label "F"
-		(at 274.32 66.04 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "690804fb-3ee3-41cc-8b6a-74a5ef9f26f1")
 	)
 	(label "A"
 		(at 166.37 66.04 0)
@@ -5962,16 +5972,6 @@
 			(justify left bottom)
 		)
 		(uuid "e91405cc-bf4a-46af-8d31-b2ad2724d667")
-	)
-	(label "F"
-		(at 246.38 66.04 0)
-		(effects
-			(font
-				(size 1.27 1.27)
-			)
-			(justify left bottom)
-		)
-		(uuid "eac813c3-d60f-4e5b-b1e4-88a0bb1a9a63")
 	)
 	(label "PD1"
 		(at 106.68 115.57 180)
