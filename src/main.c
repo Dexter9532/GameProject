@@ -3,21 +3,58 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <util/delay.h>
+#include <stdlib.h>
+#include <time.h>
 
 #define CS 2   // PB2 (CS/LOAD)
 
-uint8_t p1_points, p2_points;
 
-uint8_t random_value;
+// Variabler
+
+uint8_t p1_points, p2_points, random_value, buttons_pressed;
+uint8_t right_bin1 = 0b10000000, right_bin2 = 0b01100000, right_bin3 = 0b10110000, right_bin4 = 0b11110000;
+
+uint16_t wait;
 
 bool game_state = false;
-
 bool interrupt_flag = false;
+
+// Funktioner
 
 ISR(PCINT2_vect) {
 
-    interrupt_flag = true;
+    buttons_pressed = ~PIND; // Läs in knapptryckningar
 
+    switch (buttons_pressed) {
+        case 0b00000100: buttons_pressed = 3; break;
+        case 0b00001000: buttons_pressed = 4; break;
+        case 0b00010000: buttons_pressed = 5; break;
+        case 0b00100000: buttons_pressed = 6; break;
+        case 0b01000000: buttons_pressed = 7; break;
+        case 0b10000000: buttons_pressed = 8; break;
+    }
+// Kontrollera vilken spelare och om svaret är rätt
+    switch (buttons_pressed) {
+        case 1: case 2: case 3: case 4: // Spelare 1 knappar
+            if (buttons_pressed == random_value) {
+                p1_points++;
+            } else if (p1_points > 0) { // Se till att poängen inte blir negativ
+                p1_points--;
+            }
+            execute(0x00, p1_points);
+            break;
+
+        case 5: case 6: case 7: case 8: // Spelare 2 knappar
+            if (buttons_pressed == (random_value + 4)) {
+                p2_points++;
+            } else if (p2_points > 0) {
+                p2_points--;
+            }
+            execute(0x03, p2_points);
+            break;
+    }
+
+    interrupt_flag = true; // Flagga för att spelet vet att en knapp trycktes
 }
 void execute(uint8_t cmd, uint8_t data)
 {
@@ -71,29 +108,45 @@ uint8_t get_random_decimal() {
 
     return last_digit;
 }
+uint8_t get_random_decimal_extended() {
+    uint16_t adc_value = ADC_read(); // Läs ADC (0 - 1023)
+    
+    uint8_t mapped_value = (adc_value % 11) + 3; // Mappa till 3–13
 
+    return mapped_value;
+}
+void random_wait() {
 
+    uint8_t random_wait_time = get_random_decimal_extended();
+    random_wait_time = (random_wait_time * 1000); // Omvandla till millisekunder
+    
+    for (uint16_t i = 0; i < random_wait_time; i++) {
+        _delay_ms(1);
+    }
+}
 void show_random_number (){
-
+    
+    random_wait();
 
     switch (random_value)
     {
         case 1:
-            execute(0x06, 0b10000000);
+            execute(0x06, right_bin1);
             break;
         case 2:
-            execute(0x06, 0b01100000);
+            execute(0x06, right_bin2);
             break;
         case 3:
-            execute(0x06, 0b10110000);
+            execute(0x06, right_bin3);
             break;
         case 4:
-            execute(0x06, 0b11110000);
+            execute(0x06, right_bin4);
             break; 
     // Vänta på interrupt innan spelet fortsätter
+    }
+    sei(); 
     interrupt_flag = false; // Återställ flaggan
     while (!interrupt_flag); // Vänta på att en interrupt händer
-    
 }
 void reset_game() {
     p1_points = 0;
@@ -106,6 +159,7 @@ void reset_game() {
 }
 int main(void)
 {
+    srand(time(0)); // Initiera slumpgeneratorn en gång vid start
     DDRD = 0;
     PORTD = 255;
     DDRB = (1 << PB3) | (1 << PB5) | (1 << CS);
@@ -116,20 +170,21 @@ int main(void)
 
     while (1)
     {
-        reset_game();
-
+        cli();
+        execute(0x09, 0b00111010); 
         //show p1 and p2
-        execute(0x01
-        execute(0x02
-        execute(0x03
-        execute(0x04
-        
-        //bestäm hur långt spelet ska vara
+        execute(0x00,0b11100100);
+        execute(0x01,1);
+        execute(0x02,0b11100100);
+        execute(0x03,2);
 
+        //bestäm hur långt spelet ska vara
 
         // Check if pin 0 on PORTB is on
         while (!(PINB & (1 << PB0) || game_state == true))
         {
+            cli();
+            execute(0x09, 0b00111111);
             game_state = true;
 
             if (PINB & (1 << PB0))
