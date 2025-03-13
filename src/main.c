@@ -40,6 +40,7 @@ ISR(PCINT2_vect) {
     // Kontrollera vilken spelare och om svaret är rätt
     switch (buttons_pressed) {
         case 1: case 2: case 3: case 4: // Spelare 1 knappar
+<<<<<<< HEAD
         if (buttons_pressed == random_value) {
             p1_points++;
             points();
@@ -60,6 +61,28 @@ ISR(PCINT2_vect) {
         }
         execute(0x03, p2_points);
         break;
+=======
+            if (buttons_pressed == random_value) {
+                p1_points++;
+                points();
+            } else if (p1_points > 0) { // Se till att poängen inte blir negativ
+                p1_points--;
+                points();
+            }
+            execute(0x00, p1_points);
+            break;
+
+        case 5: case 6: case 7: case 8: // Spelare 2 knappar
+            if (buttons_pressed == (random_value + 4)) {
+                p2_points++;
+                points();
+            } else if (p2_points > 0) {
+                p2_points--;
+                points();
+            }
+            execute(0x03, p2_points);
+            break;
+>>>>>>> origin/main
     }
 
     interrupt_flag = true; // Flagga för att spelet vet att en knapp trycktes
@@ -160,6 +183,25 @@ void show_random_number (){
             wheel = 0;
         }
     } // Vänta på att en interrupt händer
+<<<<<<< HEAD
+=======
+}
+void points (){
+    
+    if (p1_points == 10){
+        execute(0x00,1);
+        execute(0x01,0);
+        game_win = true;
+    }  
+    else if (p2_points == 10){
+        execute(0x02,1)
+        execute(0x03,0)
+        game_win = true;
+    }
+    if (game_win == false){
+    execute(0x01,p1_points);
+    execute(0x03,p2_points);
+>>>>>>> origin/main
 }
 void points (){
     
@@ -183,10 +225,28 @@ void points (){
         p2_points = 0;
         game_state = false;
 
+<<<<<<< HEAD
         //fix this function so it does not restart directly
         _delay_ms(3000);
     }
     int main(void)
+=======
+    //fix this function so it does not restart directly
+    blink_leds();
+    _delay_ms(3000);
+}
+int main(void)
+{
+    DDRD = 0;
+    PORTD = 255;
+    DDRB = (1 << PB3) | (1 << PB5) | (1 << CS);
+
+    spi_init();
+    ADC_init();
+    setup_interrupts();
+
+    while (1)
+>>>>>>> origin/main
     {
         DDRD = 0;
         PORTD = 255;
@@ -206,10 +266,24 @@ void points (){
             execute(0x02,0b11100100);
             execute(0x03,2);
 
+<<<<<<< HEAD
             //bestäm hur långt spelet ska vara
 
             // Check if pin 0 on PORTB is on
             while (!(PINB & (1 << PB0) || game_state == true))
+=======
+        while (game_win == true)
+        {
+            uint8_t first = counter / 10;  // Tiotal
+            uint8_t second = counter % 10;   // Ental
+            execute(0x04, first); // Skicka tiotal
+            execute(0x05, second); // Skicka ental
+            _delay_ms(10000);
+            game_win = false;
+            reset_game();
+        }
+            if (PINB & (1 << PB0))
+>>>>>>> origin/main
             {
                 cli();
                 execute(0x09, 0b00111111);
