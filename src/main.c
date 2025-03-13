@@ -11,12 +11,12 @@
 
 // Variabler
 
-uint8_t p1_points, p2_points, random_value, buttons_pressed;
+uint8_t p1_points, p2_points, random_value, buttons_pressed, wheel;
 uint8_t right_bin1 = 0b10000000, right_bin2 = 0b01100000, right_bin3 = 0b10110000, right_bin4 = 0b11110000;
 
 uint16_t wait;
 
-bool game_state = false;
+bool game_state = false, game_win = false;
 bool interrupt_flag = false;
 
 // Funktioner
@@ -38,8 +38,10 @@ ISR(PCINT2_vect) {
         case 1: case 2: case 3: case 4: // Spelare 1 knappar
             if (buttons_pressed == random_value) {
                 p1_points++;
+                points();
             } else if (p1_points > 0) { // Se till att poängen inte blir negativ
                 p1_points--;
+                points();
             }
             execute(0x00, p1_points);
             break;
@@ -47,8 +49,10 @@ ISR(PCINT2_vect) {
         case 5: case 6: case 7: case 8: // Spelare 2 knappar
             if (buttons_pressed == (random_value + 4)) {
                 p2_points++;
+                points();
             } else if (p2_points > 0) {
                 p2_points--;
+                points();
             }
             execute(0x03, p2_points);
             break;
@@ -146,7 +150,28 @@ void show_random_number (){
     }
     sei(); 
     interrupt_flag = false; // Återställ flaggan
-    while (!interrupt_flag); // Vänta på att en interrupt händer
+    while (!interrupt_flag){
+        wheel++;
+        if (wheel > 20) {
+            wheel = 0;
+        }
+    } // Vänta på att en interrupt händer
+}
+void points (){
+    
+    if (p1_points == 10){
+        execute(0x00,1);
+        execute(0x01,0);
+        game_win = true;
+    }  
+    else if (p2_points == 10){
+        execute(0x02,1)
+        execute(0x03,0)
+        game_win = true;
+    }
+    if (game_win == false){
+    execute(0x01,p1_points);
+    execute(0x03,p2_points);
 }
 void reset_game() {
     p1_points = 0;
@@ -159,7 +184,6 @@ void reset_game() {
 }
 int main(void)
 {
-    srand(time(0)); // Initiera slumpgeneratorn en gång vid start
     DDRD = 0;
     PORTD = 255;
     DDRB = (1 << PB3) | (1 << PB5) | (1 << CS);
@@ -187,6 +211,16 @@ int main(void)
             execute(0x09, 0b00111111);
             game_state = true;
 
+        while (game_win == true)
+        {
+            uint8_t first = counter / 10;  // Tiotal
+            uint8_t second = counter % 10;   // Ental
+            execute(0x04, first); // Skicka tiotal
+            execute(0x05, second); // Skicka ental
+            _delay_ms(10000);
+            game_win = false;
+            reset_game();
+        }
             if (PINB & (1 << PB0))
             {
                 game_state = false;
