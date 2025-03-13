@@ -1,3 +1,4 @@
+#define F_CPU 1000000UL
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <stdint.h>
@@ -7,16 +8,19 @@
 #include <time.h>
 
 #define CS 2   // PB2 (CS/LOAD)
+#define PB0 0
+#define PB3 3
+#define PB5 5
 
 
 // Variabler
 
-uint8_t p1_points, p2_points, random_value, buttons_pressed;
+uint8_t p1_points, p2_points, random_value, buttons_pressed, wheel;
 uint8_t right_bin1 = 0b10000000, right_bin2 = 0b01100000, right_bin3 = 0b10110000, right_bin4 = 0b11110000;
 
 uint16_t wait;
 
-bool game_state = false;
+bool game_state = false, game_win = false;
 bool interrupt_flag = false;
 
 // Funktioner
@@ -33,25 +37,29 @@ ISR(PCINT2_vect) {
         case 0b01000000: buttons_pressed = 7; break;
         case 0b10000000: buttons_pressed = 8; break;
     }
-// Kontrollera vilken spelare och om svaret är rätt
+    // Kontrollera vilken spelare och om svaret är rätt
     switch (buttons_pressed) {
         case 1: case 2: case 3: case 4: // Spelare 1 knappar
-            if (buttons_pressed == random_value) {
-                p1_points++;
+        if (buttons_pressed == random_value) {
+            p1_points++;
+            points();
             } else if (p1_points > 0) { // Se till att poängen inte blir negativ
-                p1_points--;
-            }
-            execute(0x00, p1_points);
-            break;
+            p1_points--;
+            points();
+        }
+        execute(0x00, p1_points);
+        break;
 
         case 5: case 6: case 7: case 8: // Spelare 2 knappar
-            if (buttons_pressed == (random_value + 4)) {
-                p2_points++;
+        if (buttons_pressed == (random_value + 4)) {
+            p2_points++;
+            points();
             } else if (p2_points > 0) {
-                p2_points--;
-            }
-            execute(0x03, p2_points);
-            break;
+            p2_points--;
+            points();
+        }
+        execute(0x03, p2_points);
+        break;
     }
 
     interrupt_flag = true; // Flagga för att spelet vet att en knapp trycktes
@@ -76,7 +84,7 @@ void setup_interrupts() {
 }
 
 void spi_init(){
-     
+    
     PORTB |= (1 << CS); // CS börjar HIGH (inaktiv)
     // SPI inställningar: Enable SPI, Master mode, SCK = F_CPU/16
     SPCR = (1 << SPE) | (1 << MSTR); // SPI på, master, stigande flank
@@ -88,7 +96,7 @@ void spi_init(){
 }
 void ADC_init() {
     ADMUX = (1 << REFS0); // Välj referensspänning AVCC (5V)
-    ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0); 
+    ADCSRA = (1 << ADEN) | (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
     // Aktivera ADC och sätt prescaler till 128 (16MHz/128 = 125kHz ADC-klocka)
 }
 uint16_t ADC_read() {
@@ -131,70 +139,99 @@ void show_random_number (){
     switch (random_value)
     {
         case 1:
-            execute(0x06, right_bin1);
-            break;
+        execute(0x06, right_bin1);
+        break;
         case 2:
-            execute(0x06, right_bin2);
-            break;
+        execute(0x06, right_bin2);
+        break;
         case 3:
-            execute(0x06, right_bin3);
-            break;
+        execute(0x06, right_bin3);
+        break;
         case 4:
-            execute(0x06, right_bin4);
-            break; 
-    // Vänta på interrupt innan spelet fortsätter
+        execute(0x06, right_bin4);
+        break;
+        // Vänta på interrupt innan spelet fortsätter
     }
-    sei(); 
+    sei();
     interrupt_flag = false; // Återställ flaggan
-    while (!interrupt_flag); // Vänta på att en interrupt händer
+    while (!interrupt_flag){
+        wheel++;
+        if (wheel > 20) {
+            wheel = 0;
+        }
+    } // Vänta på att en interrupt händer
 }
-void reset_game() {
-    p1_points = 0;
-    p2_points = 0;
-    game_state = false;
+void points (){
+    
+    if (p1_points == 10){
+        execute(0x00,1);
+        execute(0x01,0);
+        game_win = true;
+    }
+    else if (p2_points == 10){
+        execute(0x02,1);
+        execute(0x03,0);
+        game_win = true;
+    }
+    if (game_win == false){
+        execute(0x01,p1_points);
+        execute(0x03,p2_points);
+    }
+}    
+    void reset_game() {
+        p1_points = 0;
+        p2_points = 0;
+        game_state = false;
 
-    //fix this function so it does not restart directly
-    blink_leds();
-    _delay_ms(3000);
-}
-int main(void)
-{
-    srand(time(0)); // Initiera slumpgeneratorn en gång vid start
-    DDRD = 0;
-    PORTD = 255;
-    DDRB = (1 << PB3) | (1 << PB5) | (1 << CS);
-
-    spi_init();
-    ADC_init();
-    setup_interrupts();
-
-    while (1)
+        //fix this function so it does not restart directly
+        _delay_ms(3000);
+    }
+    int main(void)
     {
-        cli();
-        execute(0x09, 0b00111010); 
-        //show p1 and p2
-        execute(0x00,0b11100100);
-        execute(0x01,1);
-        execute(0x02,0b11100100);
-        execute(0x03,2);
+        DDRD = 0;
+        PORTD = 255;
+        DDRB = (1 << PB3) | (1 << PB5) | (1 << CS);
 
-        //bestäm hur långt spelet ska vara
+        spi_init();
+        ADC_init();
+        setup_interrupts();
 
-        // Check if pin 0 on PORTB is on
-        while (!(PINB & (1 << PB0) || game_state == true))
+        while (1)
         {
             cli();
-            execute(0x09, 0b00111111);
-            game_state = true;
+            execute(0x09, 0b00111010);
+            //show p1 and p2
+            execute(0x00,0b11100100);
+            execute(0x01,1);
+            execute(0x02,0b11100100);
+            execute(0x03,2);
 
-            if (PINB & (1 << PB0))
+            //bestäm hur långt spelet ska vara
+
+            // Check if pin 0 on PORTB is on
+            while (!(PINB & (1 << PB0) || game_state == true))
             {
-                game_state = false;
-                blink_leds();
-                _delay_ms(3000);
+                cli();
+                execute(0x09, 0b00111111);
+                game_state = true;
+
+                while (game_win == true)
+                {
+                    uint8_t first = wheel / 10;  // Tiotal
+                    uint8_t second = wheel % 10;   // Ental
+                    execute(0x04, first); // Skicka tiotal
+                    execute(0x05, second); // Skicka ental
+                    _delay_ms(10000);
+                    game_win = false;
+                    reset_game();
+                }
+                if (PINB & (1 << PB0))
+                {
+                    game_state = false;
+                    _delay_ms(3000);
+                }
+                random_value = get_random_decimal();
+                show_random_number();
             }
-            random_value = get_random_decimal();
-            show_random_number();
         }
     }
-}
